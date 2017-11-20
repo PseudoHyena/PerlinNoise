@@ -16,7 +16,15 @@ class Perlin {
 		138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
 	};
 
+	struct gradientVectors{
+		float a [2] = {  1, 0 };
+        float b [2] = { -1, 0 };
+		float c [2] = {  0, 1 };
+		float d [2] = {  0, -1 };
+	};
+
 	float Lerp(float node0, float node1, float weight);
+	gradientVectors GetPseudoRandomGradientVector(int floor_x, int floor_y);
 	float DotGridGradient(int floor_x, int floor_y, float x, float y);
 
 public:

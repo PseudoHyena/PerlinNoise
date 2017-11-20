@@ -8,6 +8,10 @@ float Perlin::Lerp(float node0, float node1, float weight){
 	return ((float)1.0 - weight) * node0 + weight * node1;
 }
 
+Perlin::gradientVectors Perlin::GetPseudoRandomGradientVector(int floor_x, int floor_y){
+
+}
+
 float Perlin::DotGridGradient(int floor_x, int floor_y, float x, float y){
 	//grad vect
 
