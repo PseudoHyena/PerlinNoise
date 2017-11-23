@@ -24,6 +24,9 @@ double InverseLerp(double a, double b, double value) {
 	if ((double)a != (double)b) {
 		return clamp((((double)value - (double)a) / ((double)b - (double)a)), 0.0, 1.0);
 	}
+	else{
+		return 0;
+	}
 }
 
 struct Color {
@@ -220,19 +223,15 @@ int main() {
 			{
 			case 'a':
 				offsetX -= step;
-				isParCh = true;
 				break;
 			case 'w':
 				offsetY -= step;
-				isParCh = true;
 				break;
 			case 'd':
 				offsetX += step;
-				isParCh = true;
 				break;
 			case 's':
 				offsetY += step;
-				isParCh = true;
 				break;
 			case 'o':
 				offsetOctaves -= 1;
@@ -306,19 +305,15 @@ int main() {
 			{
 			case 'a':
 				offsetX -= step;
-				isParCh = true;
 				break;
 			case 'w':
 				offsetY -= step;
-				isParCh = true;
 				break;
 			case 'd':
 				offsetX += step;
-				isParCh = true;
 				break;
 			case 's':
 				offsetY += step;
-				isParCh = true;
 				break;
 			case 'o':
 				offsetOctaves -= 1;
