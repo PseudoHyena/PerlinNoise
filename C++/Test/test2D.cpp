@@ -99,7 +99,16 @@ void addRegions() {
 	regions.push_back(region);
 }
 
+double maxNoiseHeight = -100000;
+double minNoiseHeight = 100000;
+bool firstSetMaxMinHeight = true;
+bool isParCh = false;
+
 void getMap(double** noiseMap, int offsetX, int offsetY, int& offsetScale, int& offsetOctaves, double& offsetLacunarity, double& offsetPersistance) {
+	if (isParCh == true){
+		firstSetMaxMinHeight = true;
+	}
+
 	int scale = 76 + offsetScale; //best 76
 	int octaves = 4 + offsetOctaves; // best 4
 	double lacunarity = 3 + offsetLacunarity; // best 3
@@ -115,11 +124,6 @@ void getMap(double** noiseMap, int offsetX, int offsetY, int& offsetScale, int& 
 		offsetOctaves += 1;
 	}
 
-	bool setMaxMin = false;
-
-	double maxNoiseHeight = 0;
-	double minNoiseHeight = 0;
-
 	Perlin perlin;
 
 	for (int y = 0; y < MAP_SIZE; ++y) {
@@ -132,24 +136,20 @@ void getMap(double** noiseMap, int offsetX, int offsetY, int& offsetScale, int& 
 				double sampleX = (double)(x + offsetX) / scale * frequency;
 				double sampleY = (double)(y + offsetY) / scale * frequency;
 
-				double perlinValue = perlin.Noise2D(sampleX, sampleY);
+				double perlinValue = perlin.Noise(sampleX, sampleY);
 				noiseHeight += perlinValue * amplitude;
-
-				if (setMaxMin == false) {
-					maxNoiseHeight = noiseHeight;
-					minNoiseHeight = noiseHeight;
-					setMaxMin = true;
-				}
 
 				amplitude *= persistance;
 				frequency *= lacunarity;
 			}
 
-			if (noiseHeight > maxNoiseHeight) {
-				maxNoiseHeight = noiseHeight;
-			}
-			else if (noiseHeight < minNoiseHeight) {
-				minNoiseHeight = noiseHeight;
+			if (firstSetMaxMinHeight == true){
+				if (noiseHeight > maxNoiseHeight) {
+					maxNoiseHeight = noiseHeight;
+				}
+				else if (noiseHeight < minNoiseHeight) {
+					minNoiseHeight = noiseHeight;
+				}
 			}
 
 			noiseMap[y][x] = noiseHeight;
@@ -161,6 +161,9 @@ void getMap(double** noiseMap, int offsetX, int offsetY, int& offsetScale, int& 
 			noiseMap[y][x] = InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[y][x]);
 		}
 	}
+
+	firstSetMaxMinHeight = false;
+	isParCh = false;
 }
 
 int main() {
@@ -217,39 +220,51 @@ int main() {
 			{
 			case 'a':
 				offsetX -= step;
+				isParCh = true;
 				break;
 			case 'w':
 				offsetY -= step;
+				isParCh = true;
 				break;
 			case 'd':
 				offsetX += step;
+				isParCh = true;
 				break;
 			case 's':
 				offsetY += step;
+				isParCh = true;
 				break;
 			case 'o':
 				offsetOctaves -= 1;
+				isParCh = true;
 				break;
 			case 'O':
 				offsetOctaves += 1;
+				isParCh = true;
 				break;
 			case 'p':
 				offsetPersistance -= 0.01;
+				isParCh = true;
 				break;
 			case 'P':
 				offsetPersistance += 0.01;
+				isParCh = true;
 				break;
 			case 'l':
 				offsetLacunarity -= 0.01;
+				isParCh = true;
 				break;
 			case 'L':
 				offsetLacunarity += 0.01;
+				isParCh = true;
 				break;
 			case 'm':
 				offsetScale -= 1;
+				isParCh = true;
 				break;
 			case 'M':
 				offsetScale += 1;
+				isParCh = true;
 				break;
 			case 'z':
 				breakFlag = true;
@@ -272,8 +287,8 @@ int main() {
 		for (int y = 0; y < MAP_SIZE; ++y) {
 			for (int x = 0; x < MAP_SIZE; ++x) {
 				double currentHeight = noiseMap[y][x];
-				
-				for (int i = 0; i <= regions.size(); ++i) {
+		
+				for (int i = 0; i < regions.size(); ++i) {
 					if (currentHeight <= regions[i].height) {
 						SetPixel(hdc, x, y, RGB(regions[i].color.R, regions[i].color.G, regions[i].color.B));
 						break;
@@ -290,40 +305,52 @@ int main() {
 			switch (button)
 			{
 			case 'a':
-				offsetX += -1;
+				offsetX -= step;
+				isParCh = true;
 				break;
 			case 'w':
-				offsetY += -1;
+				offsetY -= step;
+				isParCh = true;
 				break;
 			case 'd':
-				offsetX += 1;
+				offsetX += step;
+				isParCh = true;
 				break;
 			case 's':
-				offsetY += 1;
+				offsetY += step;
+				isParCh = true;
 				break;
 			case 'o':
 				offsetOctaves -= 1;
+				isParCh = true;
 				break;
 			case 'O':
 				offsetOctaves += 1;
+				isParCh = true;
 				break;
 			case 'p':
 				offsetPersistance -= 0.01;
+				isParCh = true;
 				break;
 			case 'P':
 				offsetPersistance += 0.01;
+				isParCh = true;
 				break;
 			case 'l':
 				offsetLacunarity -= 0.01;
+				isParCh = true;
 				break;
 			case 'L':
 				offsetLacunarity += 0.01;
+				isParCh = true;
 				break;
 			case 'm':
 				offsetScale -= 1;
+				isParCh = true;
 				break;
 			case 'M':
 				offsetScale += 1;
+				isParCh = true;
 				break;
 			case 'z':
 				breakFlag = true;
@@ -348,17 +375,6 @@ int main() {
 	std::cout << "offsetOctaves: " << offsetOctaves << std::endl;
 	std::cout << "offsetLacurarity: " << offsetLacunarity << std::endl;
 	std::cout << "offsetPersistance: " << offsetPersistance << std::endl;
-
-
-	getMap(noiseMap, 5, 0, offsetScale, offsetOctaves, offsetLacunarity, offsetPersistance);
-
-	double a = noiseMap[0][0];
-
-	getMap(noiseMap, 0, 0, offsetScale, offsetOctaves, offsetLacunarity, offsetPersistance);
-
-	double b = noiseMap[0][5];
-
-	std::cout << a - b << std::endl;
 
 	system("pause");
 
