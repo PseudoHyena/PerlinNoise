@@ -4,10 +4,9 @@
 #include <conio.h>
 #include <Windows.h>
 #include "PerlinLib.h"
+#include <cstdint>
 
 #define MAP_SIZE 256
-#define DISPLAY_Y_OFFSET 150
-#define MULTIPLY 100
 #define DISPLAY_MODE 2 //0 - num, 1 - NoiseMap, 2 - ColorMap 
 
 double clamp(double value, double a, double b){
@@ -109,7 +108,7 @@ double minNoiseHeight = 100000;
 bool firstSetMaxMinHeight = true;
 bool isParCh = false;
 
-void getMap(double* noiseMap, int offsetX, int offsetY, int& offsetScale, int& offsetOctaves, double& offsetLacunarity, double& offsetPersistance) {
+void getMap(double** noiseMap, int offsetX, int offsetY, int& offsetScale, int& offsetOctaves, double& offsetLacunarity, double& offsetPersistance) {
 	if (isParCh == true){
 		firstSetMaxMinHeight = true;
 	}
@@ -117,7 +116,7 @@ void getMap(double* noiseMap, int offsetX, int offsetY, int& offsetScale, int& o
 	int scale = 76 + offsetScale; //best 76
 	int octaves = 4 + offsetOctaves; // best 4
 	double lacunarity = 3 + offsetLacunarity; // best 3
-	double persistance = 0.1 + offsetPersistance; // best .1
+	double persistance = 0.51 + offsetPersistance; // best .51
 
 	if (scale <= 0){
 		scale = 1;
@@ -131,47 +130,44 @@ void getMap(double* noiseMap, int offsetX, int offsetY, int& offsetScale, int& o
 
 	NoiseGeneration::Perlin perlin;
 
-	for (int x = 0; x < MAP_SIZE; ++x) {
-		double amplitude = 1;
-		double frequency = 1;
-		double noiseHeight = 0;
+	for (int y = 0; y < MAP_SIZE; ++y) {
+		for (int x = 0; x < MAP_SIZE; ++x) {
+			double amplitude = 1;
+			double frequency = 1;
+			double noiseHeight = 0;
 
-		for (int i = 0; i < octaves; ++i) {
-			double sampleX = (double)(x + offsetX) / scale * frequency;
+			for (int i = 0; i < octaves; ++i) {
+				double sampleX = (double)(x + offsetX) / scale * frequency;
+				double sampleY = (double)(y + offsetY) / scale * frequency;
 
-			double perlinValue = perlin.Noise(sampleX);
-			noiseHeight += perlinValue * amplitude;
+				double perlinValue = perlin.Noise(sampleX, sampleY);
+				noiseHeight += perlinValue * amplitude;
 
-			amplitude *= persistance;
-			frequency *= lacunarity;
-		}
-
-		if (firstSetMaxMinHeight == true){
-			if (noiseHeight > maxNoiseHeight) {
-				maxNoiseHeight = noiseHeight;
+				amplitude *= persistance;
+				frequency *= lacunarity;
 			}
-			else if (noiseHeight < minNoiseHeight) {
-				minNoiseHeight = noiseHeight;
-			}
-		}
 
-		noiseMap[x] = noiseHeight;
+			if (firstSetMaxMinHeight == true){
+				if (noiseHeight > maxNoiseHeight) {
+					maxNoiseHeight = noiseHeight;
+				}
+				else if (noiseHeight < minNoiseHeight) {
+					minNoiseHeight = noiseHeight;
+				}
+			}
+
+			noiseMap[y][x] = noiseHeight;
+		}
 	}
 
-	for (int x = 0; x < MAP_SIZE; ++x) {
-		noiseMap[x] = InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[x]);
+	for (int y = 0; y < MAP_SIZE; ++y) {
+		for (int x = 0; x < MAP_SIZE; ++x) {
+			noiseMap[y][x] = InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[y][x]);
+		}
 	}
 
 	firstSetMaxMinHeight = false;
 	isParCh = false;
-}
-
-void clearDisplay(HDC hdc){
-	for (int y = 0; y < MAP_SIZE + 1; ++y){
-		for (int x = 0; x < MAP_SIZE + 1; ++x){
-			SetPixel(hdc, x, y, RGB(0, 0, 0));
-		}
-	}
 }
 
 int main() {
@@ -184,14 +180,17 @@ int main() {
 	int iWidth = rc.right;
 	int iHeight = rc.bottom;
 	HDC hdc = GetDC(hwnd);
-
+	
 	////////////////////////////////////////
-
-	double* noiseMap = new double[MAP_SIZE];
+	
+	double** noiseMap = new double*[MAP_SIZE];
+	for (int i = 0; i < MAP_SIZE; ++i) {
+		noiseMap[i] = new double[MAP_SIZE];
+	}
 
 	int offsetX = 0;
 	int offsetY = 0;
-	int offsetScale = 0;
+	int offsetScale = 0; 
 	int offsetOctaves = 0;
 	double offsetLacunarity = 0;
 	double offsetPersistance = 0;
@@ -199,8 +198,10 @@ int main() {
 
 #if DISPLAY_MODE == 0
 	getMap(noiseMap, offsetX, offsetY, offsetScale, offsetOctaves, offsetLacunarity, offsetPersistance);
-	for (int x = 0; x < MAP_SIZE; ++x) {
-		std::cout << noiseMap[y][x] << std::endl;
+	for (int y = 0; y < MAP_SIZE; ++y) {
+		for (int x = 0; x < MAP_SIZE; ++x) {
+			std::cout << noiseMap[y][x] << std::endl;
+		}
 	}
 
 #elif DISPLAY_MODE == 1
@@ -208,8 +209,10 @@ int main() {
 
 	while (true) {
 		getMap(noiseMap, offsetX, offsetY, offsetScale, offsetOctaves, offsetLacunarity, offsetPersistance);
-		for (int x = 0; x < MAP_SIZE; ++x) {
-			SetPixel(hdc, x, iHeight - int(noiseMap[x] * MULTIPLY) - DISPLAY_Y_OFFSET, RGB(255, 255, 255));
+		for (int y = 0; y < MAP_SIZE; ++y) {
+			for (int x = 0; x < MAP_SIZE; ++x) {
+				SetPixel(hdc, x, y, RGB(int(noiseMap[y][x] * 255), int(noiseMap[y][x] * 255), int(noiseMap[y][x] * 255)));
+			}
 		}
 
 		bool breakFlag = false;
@@ -221,59 +224,47 @@ int main() {
 			{
 			case 'a':
 				offsetX -= step;
-				clearDisplay(hdc);
 				break;
 			case 'w':
 				offsetY -= step;
-				clearDisplay(hdc);
 				break;
 			case 'd':
 				offsetX += step;
-				clearDisplay(hdc);
 				break;
 			case 's':
 				offsetY += step;
-				clearDisplay(hdc);
 				break;
 			case 'o':
 				offsetOctaves -= 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'O':
 				offsetOctaves += 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'p':
 				offsetPersistance -= 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'P':
 				offsetPersistance += 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'l':
 				offsetLacunarity -= 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'L':
 				offsetLacunarity += 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'm':
 				offsetScale -= 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'M':
 				offsetScale += 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'z':
 				breakFlag = true;
@@ -293,13 +284,15 @@ int main() {
 	while (true) {
 		getMap(noiseMap, offsetX, offsetY, offsetScale, offsetOctaves, offsetLacunarity, offsetPersistance);
 
-		for (int x = 0; x < MAP_SIZE; ++x) {
-			double currentHeight = noiseMap[x];
-
-			for (int i = 0; i < regions.size(); ++i) {
-				if (currentHeight <= regions[i].height) {
-					SetPixel(hdc, x, iHeight - (currentHeight * MULTIPLY) - DISPLAY_Y_OFFSET, RGB(regions[i].color.R, regions[i].color.G, regions[i].color.B));
-					break;
+		for (int y = 0; y < MAP_SIZE; ++y) {
+			for (int x = 0; x < MAP_SIZE; ++x) {
+				double currentHeight = noiseMap[y][x];
+		
+				for (int i = 0; i < regions.size(); ++i) {
+					if (currentHeight <= regions[i].height) {
+						SetPixel(hdc, x, y, RGB(regions[i].color.R, regions[i].color.G, regions[i].color.B));
+						break;
+					}
 				}
 			}
 		}
@@ -311,64 +304,49 @@ int main() {
 
 			switch (button)
 			{
+			case 'a':
 				offsetX -= step;
-				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'w':
 				offsetY -= step;
-				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'd':
 				offsetX += step;
-				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 's':
 				offsetY += step;
-				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'o':
 				offsetOctaves -= 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'O':
 				offsetOctaves += 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'p':
 				offsetPersistance -= 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'P':
 				offsetPersistance += 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'l':
 				offsetLacunarity -= 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'L':
 				offsetLacunarity += 0.01;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'm':
 				offsetScale -= 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'M':
 				offsetScale += 1;
 				isParCh = true;
-				clearDisplay(hdc);
 				break;
 			case 'z':
 				breakFlag = true;
@@ -383,12 +361,22 @@ int main() {
 
 #endif
 
+	for (int y = 0; y < MAP_SIZE; ++y){
+		for (int x = 0; x < MAP_SIZE; ++x){
+			SetPixel(hdc, x, y, RGB(0, 0, 0));
+		}
+	}
+
 	std::cout << "offsetScale: " << offsetScale << std::endl;
 	std::cout << "offsetOctaves: " << offsetOctaves << std::endl;
 	std::cout << "offsetLacurarity: " << offsetLacunarity << std::endl;
 	std::cout << "offsetPersistance: " << offsetPersistance << std::endl;
 
 	system("pause");
+
+	for (int i = 0; i < MAP_SIZE; ++i) {
+		delete[] noiseMap[i];
+	}
 
 	delete[] noiseMap;
 }
