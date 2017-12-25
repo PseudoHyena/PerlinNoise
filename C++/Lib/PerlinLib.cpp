@@ -1,6 +1,44 @@
 #include "PerlinLib.h"
+#include <random>
+#include <iostream>
 
 namespace NoiseGeneration {
+
+	Perlin::Perlin()
+	{
+		for (int i = 0; i < 512; ++i) {
+			_permutationTable[i] = _defaultPermutationTable[i & 255];
+		}
+	}
+
+	Vector1::Vector1(double _x)
+		: x(_x) {
+	}
+
+	Vector2::Vector2(double _x, double _y)
+		: x(_x), y(_y) {
+	}
+
+	double Perlin::Clamp(double value, double a, double b) {
+		if (value < a) {
+			return a;
+		}
+		else if (value > b) {
+			return b;
+		}
+		else {
+			return value;
+		}
+	}
+
+	double Perlin::InverseLerp(double a, double b, double value) {
+		if ((double)a != (double)b) {
+			return Clamp(((value - a) / (b - a)), 0.0, 1.0);
+		}
+		else {
+			return 0;
+		}
+	}
 
 	unsigned char Perlin::_defaultPermutationTable[256] = { 151, 160, 137, 91, 90, 15,
 		131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
@@ -66,6 +104,56 @@ namespace NoiseGeneration {
 		return (x1 + 1) / 2;
 	}
 
+	void Perlin::Noise(double* map, size_t mapWidth, unsigned int seed, double scale, int octaves, double persistance, double lacunarity, Vector1 offset) {
+		srand(seed);
+
+		if (scale <= 0) {
+			scale = 0.001;
+		}
+
+		if (octaves <= 0) {
+			octaves = 1;
+		}
+
+		std::vector<Vector1> octaveOffsets(octaves);
+		for (int i = 0; i < octaves; ++i) {
+			double offsetX = rand() % 200000 - 100000 + offset.x;
+			octaveOffsets[i] = Vector1(offsetX);
+		}
+
+		double maxNoiseHeight = -1000000;
+		double minNoiseHeight = 1000000;
+
+		for (int x = 0; x < mapWidth; x++) {
+
+			double amplitude = 1;
+			double frequency = 1;
+			double noiseHeight = 0;
+
+			for (int i = 0; i < octaves; i++) {
+				double sampleX = (double)x / scale * frequency + octaveOffsets[i].x;
+
+				double perlinValue = Noise(sampleX) * 2 - 1;
+				noiseHeight += perlinValue * amplitude;
+
+				amplitude *= persistance;
+				frequency *= lacunarity;
+			}
+
+			if (noiseHeight > maxNoiseHeight) {
+				maxNoiseHeight = noiseHeight;
+			}
+			else if (noiseHeight < minNoiseHeight) {
+				minNoiseHeight = noiseHeight;
+			}
+			map[x] = noiseHeight;
+		}
+
+		for (int x = 0; x < mapWidth; x++) {
+			map[x] = InverseLerp(minNoiseHeight, maxNoiseHeight, map[x]);
+		}
+	}
+
 	double Perlin::Noise(double x, double y) {
 		if (x < 0) {
 			x *= -1;
@@ -101,10 +189,59 @@ namespace NoiseGeneration {
 		return (Lerp(x1, x2, smoothY) + 1) / 2;
 	}
 
-	Perlin::Perlin()
-	{
-		for (int i = 0; i < 512; ++i) {
-			_permutationTable[i] = _defaultPermutationTable[i & 255];
+	void Perlin::Noise(double** map, size_t mapWidth, size_t mapHeight, unsigned int seed, double scale, int octaves, double persistance, double lacunarity, Vector2 offset) {
+		srand(seed);
+
+		if (scale <= 0) {
+			scale = 0.001;
+		}
+
+		if (octaves <= 0) {
+			octaves = 1;
+		}
+
+		std::vector<Vector2> octaveOffsets(octaves);
+		for (int i = 0; i < octaves; ++i) {
+			double offsetX = rand() % 200000 - 100000 + offset.x;
+			double offsetY = rand() % 200000 - 100000 + offset.y;
+			octaveOffsets[i] = Vector2(offsetX, offsetY);
+		}
+
+		double maxNoiseHeight = -1000000;
+		double minNoiseHeight = 1000000;
+
+		for (int y = 0; y < mapHeight; y++) {
+			for (int x = 0; x < mapWidth; x++) {
+
+				double amplitude = 1;
+				double frequency = 1;
+				double noiseHeight = 0;
+
+				for (int i = 0; i < octaves; i++) {
+					double sampleX = (double)x / scale * frequency + octaveOffsets[i].x;
+					double sampleY = (double)y / scale * frequency + octaveOffsets[i].y;
+
+					double perlinValue = Noise(sampleX, sampleY) * 2 - 1;
+					noiseHeight += perlinValue * amplitude;
+
+					amplitude *= persistance;
+					frequency *= lacunarity;
+				}
+
+				if (noiseHeight > maxNoiseHeight) {
+					maxNoiseHeight = noiseHeight;
+				}
+				else if (noiseHeight < minNoiseHeight) {
+					minNoiseHeight = noiseHeight;
+				}
+				map[y][x] = noiseHeight;
+			}
+		}
+
+		for (int y = 0; y < mapHeight; y++) {
+			for (int x = 0; x < mapWidth; x++) {
+				map[y][x] = InverseLerp(minNoiseHeight, maxNoiseHeight, map[y][x]);
+			}
 		}
 	}
 }
