@@ -104,7 +104,7 @@ namespace NoiseGeneration {
 		return (x1 + 1) / 2;
 	}
 
-	void Perlin::Noise(double* map, size_t mapWidth, unsigned int seed, double scale, int octaves, double persistance, double lacunarity, Vector1 offset) {
+	void Perlin::Noise(double* map, size_t mapWidth, unsigned int seed, double scale, int octaves, double persistance, double lacunarity, Vector1 offset) {	
 		srand(seed);
 
 		if (scale <= 0) {

@@ -1,7 +1,46 @@
-﻿namespace NoiseGeneration
-{
+﻿namespace NoiseGeneration {
+
+    public struct Vector1 {
+        public float x;
+
+        public Vector1(float _x) {
+           x = _x;
+        }
+    }
+
+    public struct Vector2 {
+        public float x;
+        public float y;
+
+        public Vector2(float _x, float _y) {
+            x = _x;
+            y = _y;
+        }
+    }
+
     static class Perlin
     {
+        private static float Clamp(float value, float a, float b) {
+            if (value < a) {
+                return a;
+            }
+            else if (value > b) {
+                return b;
+            }
+            else {
+                return value;
+            }
+        }
+
+        private static float InverseLerp(float a, float b, float value) {
+            if ((double)a != (double)b) {
+                return Clamp(((value - a) / (b - a)), 0.0f, 1.0f);
+            }
+            else {
+                return 0;
+            }
+        }
+
         private static byte[] _permutationTable = new byte[512] { 151, 160, 137, 91, 90, 15,
         131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
         190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
@@ -86,15 +125,63 @@
             return (x1 + 1) / 2;
         }
 
-        public static float Noise(float x, float y)
-        {
-            if (x < 0)
-            {
+        public static float[] Noise(int mapWidth, int seed, float scale, int octaves, float persistance, float lacunarity, Vector1 offset) {
+            float[] noiseMap = new float[mapWidth];
+
+            System.Random prng = new System.Random(seed);
+            Vector1[] octaveOffsets = new Vector1[octaves];
+            for (int i = 0; i < octaves; i++) {
+                float offsetX = prng.Next(-100000, 100000) + offset.x;
+                octaveOffsets[i] = new Vector1(offsetX);
+            }
+
+            if (scale <= 0) {
+                scale = 0.0001f;
+            }
+
+            float maxNoiseHeight = float.MinValue;
+            float minNoiseHeight = float.MaxValue;
+
+            float halfWidth = mapWidth / 2f;
+
+            for (int x = 0; x < mapWidth; x++) {
+
+                float amplitude = 1;
+                float frequency = 1;
+                float noiseHeight = 0;
+
+                for (int i = 0; i < octaves; i++) {
+                    float sampleX = (x - halfWidth) / scale * frequency + octaveOffsets[i].x;
+
+                    float perlinValue = Noise(sampleX) * 2 - 1;
+                    noiseHeight += perlinValue * amplitude;
+
+                    amplitude *= persistance;
+                    frequency *= lacunarity;
+                }
+
+                if (noiseHeight > maxNoiseHeight) {
+                    maxNoiseHeight = noiseHeight;
+                }
+                else if (noiseHeight < minNoiseHeight) {
+                    minNoiseHeight = noiseHeight;
+                }
+                noiseMap[x] = noiseHeight;
+            }
+
+            for (int x = 0; x < mapWidth; x++) {
+                noiseMap[x] = InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[x]);
+            }
+
+            return noiseMap;
+        }
+
+        public static float Noise(float x, float y) {
+            if (x < 0) {
                 x *= -1;
             }
 
-            if (y < 0)
-            {
+            if (y < 0) {
                 y *= -1;
             }
 
@@ -122,6 +209,65 @@
                 smoothX);
 
             return (Lerp(x1, x2, smoothY) + 1) / 2;
+        }
+
+        public static float[,] Noise(int mapWidth, int mapHeight, int seed, float scale, int octaves, float persistance, float lacunarity, Vector2 offset) {
+            float[,] noiseMap = new float[mapWidth, mapHeight];
+
+            System.Random prng = new System.Random(seed);
+            Vector2[] octaveOffsets = new Vector2[octaves];
+            for (int i = 0; i < octaves; i++) {
+                float offsetX = prng.Next(-100000, 100000) + offset.x;
+                float offsetY = prng.Next(-100000, 100000) + offset.y;
+                octaveOffsets[i] = new Vector2(offsetX, offsetY);
+            }
+
+            if (scale <= 0) {
+                scale = 0.0001f;
+            }
+
+            float maxNoiseHeight = float.MinValue;
+            float minNoiseHeight = float.MaxValue;
+
+            float halfWidth = mapWidth / 2f;
+            float halfHeight = mapHeight / 2f;
+
+
+            for (int y = 0; y < mapHeight; y++) {
+                for (int x = 0; x < mapWidth; x++) {
+
+                    float amplitude = 1;
+                    float frequency = 1;
+                    float noiseHeight = 0;
+
+                    for (int i = 0; i < octaves; i++) {
+                        float sampleX = (x - halfWidth) / scale * frequency + octaveOffsets[i].x;
+                        float sampleY = (y - halfHeight) / scale * frequency + octaveOffsets[i].y;
+
+                        float perlinValue = Noise(sampleX, sampleY) * 2 - 1;
+                        noiseHeight += perlinValue * amplitude;
+
+                        amplitude *= persistance;
+                        frequency *= lacunarity;
+                    }
+
+                    if (noiseHeight > maxNoiseHeight) {
+                        maxNoiseHeight = noiseHeight;
+                    }
+                    else if (noiseHeight < minNoiseHeight) {
+                        minNoiseHeight = noiseHeight;
+                    }
+                    noiseMap[x, y] = noiseHeight;
+                }
+            }
+
+            for (int y = 0; y < mapHeight; y++) {
+                for (int x = 0; x < mapWidth; x++) {
+                    noiseMap[x, y] = InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[x, y]);
+                }
+            }
+
+            return noiseMap;
         }
     }
 }
