@@ -182,8 +182,7 @@ namespace NoiseGeneration {
 		x1 = Lerp(GradientDotProduction(aa, distanceX, distanceY),
 			GradientDotProduction(ba, distanceX - 1, distanceY),
 			smoothX);
-		x2 = Lerp(GradientDotProduction(ab, distanceX, distanceY - 1),
-			GradientDotProduction(bb, distanceX - 1, distanceY - 1),
+		x2 = Lerp(GradientDotProduction(ab, distanceX, distanceY - 1),			GradientDotProduction(bb, distanceX - 1, distanceY - 1),
 			smoothX);
 
 		return (Lerp(x1, x2, smoothY) + 1) / 2;
