@@ -106,8 +106,6 @@
                 x *= -1;
             }
 
-            x += float.MaxValue;
-
             int x_int = (int)x & 255;
 
             float distanceX = x - (int)x;
